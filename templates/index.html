@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.0/socket.io.js"
+                integrity="sha512-+l9L4lMTFNy3dEglQpprf7jQBhQsQ3/WvOnjaN/+/L4i0jOstgScV0q2TjfvRF4V+ZePMDuZYIQtg5T4MKr+MQ=="
+                crossorigin="anonymous">
+        </script>
+        <style>
+        body {background-color: #222222; color:whitesmoke}
+        hr {border-color:deepskyblue}
+        h1   {font-size:60px;text-align:center; heigth:2px}
+        h2 {text-align:center; }
+        p {font-size:17px;}
+        #wsk {text-align:center; heigth: 250px;}
+        div {position:relative; border-style:;}
+        article {display:inline-block; border-left:deepskyblue 3px solid;
+            width:45%; height: 250px; position:relative; left: 20px; background:#222222;}
+        .lewy {float:left}
+        .prawy {left:5%}
+        .box {width:28%; float:left; margin-left:5%}
+        #wykres {width:100%; height:1000px;}
+        #sub {width:10%; heigth: 10px; margin-left:44%;margin-top:40px;margin-bottom:10px}
+        #sub input {width:180px; font-size:30px;}
+        input[type=button] {background:crimson; color:whitesmoke; }
+        section {display:inline-block; border-style:;
+            width:10%; height: 200px; position:relative; margin-bottom:50px;
+            border-top:deepskyblue 3px solid; border-bottom:deepskyblue 3px solid; padding:10px;}
+        #l {left: 42%;}
+        #r {left: 41%; width:5%}
+        </style>
+    </head>
+    <body>
+    <h1>Automatyczny system podlewania ogrodów i sadów</h1><br>
+    <form>
+        <article class="lewy">
+        <h2>Parametry zbiornika</h2>
+        <div class="box"><p>Wysokosc maksymalna</p><input type="number" id="hmax" name="hmax" value="5"
+           min="0" max="10" step="1">[m]</div>
+        <div class="box"><p>Wysokość docelowa</p><input type="number" id="hust" name="hust" value="1"
+                                         min="0" max="5" step="0.5">[m]</div>
+        <div class="box"><p>Powierzchnia zbiornika</p><input type="number" id="A" name="A" value="2"
+                                         min="0" max="5" step="0.5">[m^2]</div><br>
+            <div class="box"><p>Okres próbkowania</p> <input type="number" id="Tp" name="Tp" value="0.1"
+           min="0" max="1" step="0.1">[s]</div>
+    </article>
+
+        <article class="prawy">
+            <h2>Parametry regulatora dopływu</h2>
+        <div class="box"><p>Wzmocnienie regulatora</p> <input type="number" id="kp" name="kp" value="0.005"
+           min="0" max="0.1" step="0.001"></div>
+        <div class="box"><p>Czas wyprzedzenia</p> <input type="number" id="Td" name="Td" value="0.05"
+           min="0" max="0.1" step="0.001">[s]</div>
+        <div class="box"><p>Czas zdwojenia</p> <input type="number" id="Ti" name="Ti" value="0.5"
+           min="0" max="2" step="0.1">[s]</div>
+        <div class="box"><p>Maks. napięcie regulatora</p> <input type="number" id="Umax" name="Umax" value="10"
+           min="0" max="50" step="1">[V]</div>
+        <div class="box"><p>Maks. natężenie odpływu</p> <input type="number" id="Qmax" name="Qmax" value="5"
+           min="0" max="10" step="0.5">[L/s]</div>
+    </article>
+    <hr>
+        <br>
+        <article class="lewy">
+        <h2>Wymagane natężenie do uprawy</h2>
+        <div class="box"><p>Uprawa 1</p><input type="number" id="z1" name="z3" value="2"
+           min="0" max="5" step="0.5">[L/s]</div>
+        <div class="box"><p>Uprawa 2</p><input type="number" id="z2" name="z2" value="0.5"
+                                         min="0" max="5" step="0.5">[L/s]</div>
+        <div class="box"><p>Uprawa 3</p><input type="number" id="z3" name="z1" value="0.5"
+                                         min="0" max="5" step="0.5">[L/s]</div><br>
+    </article>
+        <article class="prawy">
+            <h2>Symulator opadów (natężenie dla całej uprawy)</h2>
+        <div class="box"><p>Opady o 0:00</p> <input type="number" id="h1" name="h1" value="0"
+           min="0" max="5" step="0.5">[L/s]</div>
+        <div class="box"><p>Opady o 1:00</p> <input type="number" id="h2" name="h2" value="1"
+           min="0" max="5" step="0.5">[L/s]</div>
+        <div class="box"><p>Opady o 2:00</p> <input type="number" id="h3" name="h3" value="1"
+           min="0" max="5" step="0.5">[L/s]</div>
+        <div class="box"><p>Opady o 3:00</p> <input type="number" id="h4" name="h4" value="0"
+           min="0" max="5" step="0.5">[L/s]</div>
+        <div class="box"><p>Opady o 4:00</p> <input type="number" id="h5" name="h5" value="0"
+           min="0" max="5" step="0.5">[L/s]</div>
+    </article>
+    <hr>
+        <br>
+         <div id="wsk">
+        <h2>Wskaźniki jakości</h2>
+             </div>
+
+             <section id="l">
+             <p>Uchyb ustalony:</p>
+             <p>Przeregulowanie:</p>
+             <p>Dokładność regulacji:</p>
+             <p>Koszty regulacji:</p>
+             <p>Czas regulacji:</p>
+             </section>
+
+        <section id="r">
+             <p id="us">us</p>
+             <p id="prz">prz %</p>
+             <p id="dr">dr</p>
+             <p id="kr">kr</p>
+             <p id="tr">tr min</p>
+             </section>
+        <br>
+        <br>
+        <hr>
+        <div id="sub"><input type="button" name="generuj" value="Generuj" onclick="calculate()"></div>
+    </form>
+
+    <div id = "wykres">
+        <h1>Wykresy</h1>
+    <iframe id="graph" name="okno" src="{{ url_for('static', filename='plot.html') }}" width="100%" height="1000 px" frameborder="1"></iframe><br>
+    </div>
+
+    <script>
+        var socket = io();
+        socket.on('connect', function() {
+            socket.emit('my event', {data: 'I\'m connected!'});
+        });
+
+        function calculate(){
+            let q1 = document.querySelector("input#z1").value / 1000;
+            let q2 = document.querySelector("input#z2").value / 1000;
+            let q3 = document.querySelector("input#z3").value / 1000;
+
+            let d1 = document.querySelector("input#h1").value / 1000;
+            let d2 = document.querySelector("input#h2").value / 1000;
+            let d3 = document.querySelector("input#h3").value / 1000;
+            let d4 = document.querySelector("input#h4").value / 1000;
+            let d5 = document.querySelector("input#h5").value / 1000;
+
+            let hmax = document.querySelector("input#hmax").value;
+            let hust = document.querySelector("input#hust").value;
+            let A = document.querySelector("input#A").value;
+            let Tp = document.querySelector("input#Tp").value;
+
+            let kp = document.querySelector("input#kp").value;
+            let Td = document.querySelector("input#Td").value;
+            let Ti = document.querySelector("input#Ti").value;
+            let Umax = document.querySelector("input#Umax").value;
+            let Qmax = document.querySelector("input#Qmax").value / 1000;
+
+            let prognoza = [d1, d2, d3, d4, d5];
+
+
+            socket.emit('calculate', {z1: q1,
+                    z2: q2,
+                    z3: q3,
+                    deszcz: prognoza,
+                    hm: hmax,
+                    hd: hust,
+                    pow: A,
+                    Tpp: Tp,
+                    kpp: kp,
+                    Tdd: Td,
+                    Tii: Ti,
+                    Um: Umax,
+                    Qm: Qmax
+                    });
+        }
+
+        socket.on('done', function(data){
+            let iframe = document.querySelector("iframe#graph").contentWindow.location.reload(true);
+            document.querySelector("p#us").innerHTML = data.uchyb;
+            document.querySelector("p#prz").innerHTML = data.przeregulowanie + " %";
+            document.querySelector("p#dr").innerHTML = data.dokladnosc;
+            document.querySelector("p#kr").innerHTML = data.koszty;
+            document.querySelector("p#tr").innerHTML = data.czas_regulacji + " min";
+        });
+
+
+    </script>
+
+    </body>
+</html>
